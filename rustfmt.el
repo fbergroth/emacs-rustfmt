@@ -23,10 +23,10 @@
 
 ;;; Commentary:
 
-;; Call `rustfmt-buffer' to format the current buffer using rustfmt. It is
+;; Call `rustfmt-format-buffer' to format the current buffer using rustfmt. It is
 ;; convenient to bind it to a key, such as:
 ;;
-;;    (define-key rust-mode-map (kbd "C-c C-f") #'rustfmt-buffer)
+;;    (define-key rust-mode-map (kbd "C-c C-f") #'rustfmt-format-buffer)
 ;;
 ;; Errors and warnings will be visible in the `*rustfmt*' buffer.
 
@@ -34,38 +34,34 @@
 
 (defvar rustfmt-bin "rustfmt")
 
+(defun rustfmt--call (cur-file tmp-file)
+  "Format the CUR-FILE copy TMP-FILE using rustfmt."
+  (with-current-buffer (get-buffer-create "*rustfmt*")
+    (delete-region (point-min) (point-max))
+    (let ((status (call-process rustfmt-bin nil t nil
+                                "--write-mode=overwrite" tmp-file)))
+      (goto-char (point-min))
+      (while (re-search-forward tmp-file nil t)
+        (replace-match cur-file))
+
+      (unless (zerop status)
+        (error "Rustfmt failed, see *rustfmt* buffer for details")))))
+
 ;;;###autoload
-(defun rustfmt-buffer ()
+(defun rustfmt-format-buffer ()
   "Format the current buffer using rustfmt."
   (interactive)
-
   (unless (executable-find rustfmt-bin)
     (error "Could not locate executable \"%s\"" rustfmt-bin))
 
   (let ((cur-file (buffer-file-name))
-        (tmp-file (make-temp-file "rustfmt" nil ".rs"))
-        (process-buffer (get-buffer-create "*rustfmt*")))
-    (write-region nil nil tmp-file nil 'silent)
-
-    (with-current-buffer process-buffer
-      (let ((inhibit-read-only t))
-        (delete-region (point-min) (point-max))
-        (unless (zerop (call-process rustfmt-bin nil t nil
-                                     "--write-mode=overwrite" tmp-file))
-          (error "Rustfmt failed, see *rustfmt* buffer for details"))
-
-        ;; Clean up *rustfmt* buffer
-        (goto-char (point-min))
-        (let ((needle (format "Rustfmt failed at %s" tmp-file)))
-          (while (re-search-forward needle nil t)
-            (replace-match cur-file)))
-
-        ;; Navigate warnings with grep-mode
-        (grep-mode)))
-
-    (insert-file-contents tmp-file nil nil nil 'replace)
-    (delete-file tmp-file)
-    (message "Formatted buffer with rustfmt.")))
+        (tmp-file (make-temp-file "rustfmt" nil ".rs")))
+    (unwind-protect
+        (progn (write-region nil nil tmp-file nil 'silent)
+               (rustfmt--call cur-file tmp-file)
+               (insert-file-contents tmp-file nil nil nil 'replace)
+               (message "Formatted buffer with rustfmt."))
+      (delete-file tmp-file))))
 
 (provide 'rustfmt)
 ;;; rustfmt.el ends here
