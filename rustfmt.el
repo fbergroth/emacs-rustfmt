@@ -28,24 +28,45 @@
 ;;
 ;;    (define-key rust-mode-map (kbd "C-c C-f") #'rustfmt-format-buffer)
 ;;
+;; Alternatively, run rustfmt before saving rust buffers:
+;;
+;;    (add-hook 'rust-mode-hook #'rustfmt-enable-on-save)
+;;
 ;; Errors and warnings will be visible in the `*rustfmt*' buffer.
 
 ;;; Code:
 
-(defvar rustfmt-bin "rustfmt")
+(defgroup rustfmt nil
+  "Format rust buffers using rustfmt."
+  :group 'convenience
+  :prefix "rustfmt-")
+
+(defcustom rustfmt-bin "rustfmt"
+  "Path to rustfmt executable."
+  :type 'string)
+
+(defcustom rustfmt-popup-errors t
+  "Display error buffer when rustfmt fails."
+  :type 'boolean)
 
 (defun rustfmt--call (cur-file tmp-file)
   "Format the CUR-FILE copy TMP-FILE using rustfmt."
   (with-current-buffer (get-buffer-create "*rustfmt*")
-    (delete-region (point-min) (point-max))
-    (let ((status (call-process rustfmt-bin nil t nil
-                                "--write-mode=overwrite" tmp-file)))
-      (goto-char (point-min))
-      (while (re-search-forward tmp-file nil t)
-        (replace-match cur-file))
+    (compilation-mode)
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (let ((status (call-process rustfmt-bin nil t nil
+                                  "--write-mode=overwrite" tmp-file)))
+        (goto-char (point-min))
+        (while (re-search-forward tmp-file nil t)
+          (replace-match cur-file))
+        (goto-char (point-min))
 
-      (unless (zerop status)
-        (error "Rustfmt failed, see *rustfmt* buffer for details")))))
+        (if (zerop status)
+            (kill-buffer)
+          (when rustfmt-popup-errors
+            (pop-to-buffer (current-buffer)))
+          (error "Rustfmt failed, see *rustfmt* buffer for details"))))))
 
 ;;;###autoload
 (defun rustfmt-format-buffer ()
@@ -62,6 +83,12 @@
                (insert-file-contents tmp-file nil nil nil 'replace)
                (message "Formatted buffer with rustfmt."))
       (delete-file tmp-file))))
+
+;;;###autoload
+(defun rustfmt-enable-on-save ()
+  "Run rustfmt when saving bufer."
+  (interactive)
+  (add-hook 'before-save-hook #'rustfmt-format-buffer nil t))
 
 (provide 'rustfmt)
 ;;; rustfmt.el ends here
