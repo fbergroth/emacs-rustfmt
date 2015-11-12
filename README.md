@@ -16,7 +16,7 @@ For convenience, you may bind it to a key, such as:
 Alternatively, run rustfmt before saving rust buffers:
 ```el
 (add-hook 'rust-mode-hook #'rustfmt-enable-on-save)
-``````
+```
 
 [rustfmt]: https://github.com/nrc/rustfmt
 [badge-melpa]: http://melpa.org/packages/rustfmt-badge.svg

@@ -86,7 +86,7 @@
 
 ;;;###autoload
 (defun rustfmt-enable-on-save ()
-  "Run rustfmt when saving bufer."
+  "Run rustfmt when saving buffer."
   (interactive)
   (add-hook 'before-save-hook #'rustfmt-format-buffer nil t))
 
