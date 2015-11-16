@@ -4,6 +4,22 @@
 
 Format rust code in emacs using [rustfmt][].
 
+## Install
+
+Ensure you are using MELPA:
+
+```lisp
+(require 'package)
+(add-to-list 'package-archives
+             '("melpa" . "https://melpa.org/packages/") t)
+(package-initialize)
+```
+
+Then install the "rustfmt" package:
+
+* `M-x package-list-packages`
+* Find the "rustfmt" and install with `I`
+
 ## Usage
 
 Run <kbd>M-x rustfmt-format-buffer</kbd> to format the current buffer.
