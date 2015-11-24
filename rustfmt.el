@@ -49,21 +49,17 @@
   "Display error buffer when rustfmt fails."
   :type 'boolean)
 
-(defun rustfmt--call (cur-file tmp-file)
-  "Format the CUR-FILE copy TMP-FILE using rustfmt."
+(defun rustfmt--call (buf)
+  "Format BUF using rustfmt."
   (with-current-buffer (get-buffer-create "*rustfmt*")
     (compilation-mode)
     (let ((inhibit-read-only t))
       (erase-buffer)
-      (let ((status (call-process rustfmt-bin nil t nil
-                                  "--write-mode=overwrite" tmp-file)))
-        (goto-char (point-min))
-        (while (re-search-forward tmp-file nil t)
-          (replace-match cur-file))
-        (goto-char (point-min))
-
+      (insert-buffer buf)
+      (let ((status (call-process-region (point-min) (point-max) rustfmt-bin t t nil)))
         (if (zerop status)
-            (kill-buffer)
+            (progn (copy-to-buffer buf (point-min) (point-max))
+                   (kill-buffer))
           (when rustfmt-popup-errors
             (pop-to-buffer (current-buffer)))
           (error "Rustfmt failed, see *rustfmt* buffer for details"))))))
@@ -75,14 +71,12 @@
   (unless (executable-find rustfmt-bin)
     (error "Could not locate executable \"%s\"" rustfmt-bin))
 
-  (let ((cur-file (buffer-file-name))
-        (tmp-file (make-temp-file "rustfmt" nil ".rs")))
-    (unwind-protect
-        (progn (write-region nil nil tmp-file nil 'silent)
-               (rustfmt--call cur-file tmp-file)
-               (insert-file-contents tmp-file nil nil nil 'replace)
-               (message "Formatted buffer with rustfmt."))
-      (delete-file tmp-file))))
+  (let ((cur-point (point))
+        (cur-win-start (window-start)))
+    (unwind-protect (rustfmt--call (current-buffer)))
+    (goto-char cur-point)
+    (set-window-start (selected-window) cur-win-start)
+    (message "Formatted buffer with rustfmt.")))
 
 ;;;###autoload
 (defun rustfmt-enable-on-save ()
