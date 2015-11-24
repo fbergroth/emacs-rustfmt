@@ -45,24 +45,21 @@
   "Path to rustfmt executable."
   :type 'string)
 
-(defcustom rustfmt-popup-errors t
+(defcustom rustfmt-popup-errors nil
   "Display error buffer when rustfmt fails."
   :type 'boolean)
 
 (defun rustfmt--call (buf)
   "Format BUF using rustfmt."
   (with-current-buffer (get-buffer-create "*rustfmt*")
-    (compilation-mode)
-    (let ((inhibit-read-only t))
-      (erase-buffer)
-      (insert-buffer buf)
-      (let ((status (call-process-region (point-min) (point-max) rustfmt-bin t t nil)))
-        (if (zerop status)
-            (progn (copy-to-buffer buf (point-min) (point-max))
-                   (kill-buffer))
-          (when rustfmt-popup-errors
-            (pop-to-buffer (current-buffer)))
-          (error "Rustfmt failed, see *rustfmt* buffer for details"))))))
+    (erase-buffer)
+    (insert-buffer-substring buf)
+    (if (zerop (call-process-region (point-min) (point-max) rustfmt-bin t t nil))
+        (progn (copy-to-buffer buf (point-min) (point-max))
+               (kill-buffer))
+      (when rustfmt-popup-errors
+        (display-buffer (current-buffer)))
+      (error "Rustfmt failed, see *rustfmt* buffer for details"))))
 
 ;;;###autoload
 (defun rustfmt-format-buffer ()
@@ -73,10 +70,10 @@
 
   (let ((cur-point (point))
         (cur-win-start (window-start)))
-    (unwind-protect (rustfmt--call (current-buffer)))
+    (rustfmt--call (current-buffer))
     (goto-char cur-point)
-    (set-window-start (selected-window) cur-win-start)
-    (message "Formatted buffer with rustfmt.")))
+    (set-window-start (selected-window) cur-win-start))
+  (message "Formatted buffer with rustfmt."))
 
 ;;;###autoload
 (defun rustfmt-enable-on-save ()
