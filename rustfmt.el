@@ -23,6 +23,8 @@
 
 ;;; Commentary:
 
+;; *** OBSOLETE PACKAGE - This has been merged into rust-mode ***
+
 ;; Call `rustfmt-format-buffer' to format the current buffer using rustfmt. It is
 ;; convenient to bind it to a key, such as:
 ;;

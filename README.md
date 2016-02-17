@@ -1,6 +1,8 @@
-# rustfmt.el
+# rustfmt.el - OBSOLETE
 
 [![MELPA][badge-melpa]](http://melpa.org/#/rustfmt)
+
+**This package has been merged into rust-mode. Please use that instead.**
 
 Format rust code in emacs using [rustfmt][].
 
